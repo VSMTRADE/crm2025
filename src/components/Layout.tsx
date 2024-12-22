@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   LayoutDashboard, 
   Users, 
@@ -66,9 +67,10 @@ const navigation = [
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const { user, signOut } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-100">
       {/* Mobile sidebar */}
       <div className="lg:hidden">
         <button
@@ -118,15 +120,28 @@ export default function Layout() {
       </aside>
 
       {/* Main content */}
-      <main
-        className={`lg:pl-64 min-h-screen transition-all duration-300 ease-in-out`}
-      >
-        <div className="py-6">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <header className="bg-white shadow">
+          <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+            <h1 className="text-2xl font-semibold text-gray-900">CRM Moderno</h1>
+            <div className="flex items-center space-x-4">
+              <span className="text-gray-700">Olá, {user?.name}</span>
+              <button
+                onClick={signOut}
+                className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                Sair
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-y-auto bg-gray-100 p-4">
+          <div className="max-w-7xl mx-auto">
             <Outlet />
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
