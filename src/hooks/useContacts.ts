@@ -54,9 +54,42 @@ export function useContacts() {
     },
   });
 
+  const updateContact = useMutation({
+    mutationFn: async ({ id, ...contactData }: Contact) => {
+      const { data, error } = await supabase
+        .from('contacts')
+        .update(contactData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+    },
+  });
+
+  const deleteContact = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('contacts')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+    },
+  });
+
   return {
     data,
     isLoading,
     createContact,
+    updateContact,
+    deleteContact,
   };
 }

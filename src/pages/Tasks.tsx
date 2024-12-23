@@ -17,7 +17,13 @@ const columns = [
 ] as const;
 
 export default function Tasks() {
-  const { tasks, isLoading, updateTaskStatus, createTask, editTask } = useTasks();
+  const { 
+    tasks = [], 
+    isLoading, 
+    createTask, 
+    updateTaskStatus,
+    deleteTask 
+  } = useTasks();
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
 
   const handleDragEnd = (result: DropResult) => {
@@ -63,7 +69,7 @@ export default function Tasks() {
   const handleEditTask = async (taskId: string, taskData: Partial<Task>) => {
     console.log('Editing task:', { taskId, taskData });
     try {
-      await editTask.mutateAsync({ taskId, taskData });
+      await updateTaskStatus.mutateAsync({ taskId, status: taskData.status });
       toast.success('Tarefa atualizada com sucesso');
     } catch (error) {
       console.error('Error editing task:', error);
@@ -111,37 +117,19 @@ export default function Tasks() {
 
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="flex gap-6 overflow-x-auto pb-6">
-          {columns.map((column) => (
-            <div key={column.id} className="flex-1 min-w-[300px]">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-medium text-gray-900 mb-4">
-                  {column.title} ({tasks.filter(task => task.status === column.id).length})
-                </h3>
-                <StrictModeDroppable droppableId={column.id}>
-                  {(provided, snapshot) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                      className={`min-h-[150px] transition-colors duration-200 ${
-                        snapshot.isDraggingOver ? 'bg-indigo-50' : ''
-                      }`}
-                    >
-                      {tasks
-                        .filter(task => task.status === column.id)
-                        .map((task, index) => (
-                          <TaskCard
-                            key={task.id}
-                            task={task}
-                            index={index}
-                            onEditTask={handleEditTask}
-                          />
-                        ))}
-                      {provided.placeholder}
-                    </div>
-                  )}
-                </StrictModeDroppable>
-              </div>
-            </div>
+          {columns.map((status) => (
+            <TaskColumn
+              key={status.id}
+              title={status.title}
+              tasks={tasks.filter(task => task.status === status.id)}
+              status={status.id}
+              onEditTask={handleEditTask}
+              onDeleteTask={(taskId) => {
+                if (window.confirm('Tem certeza que deseja excluir esta tarefa?')) {
+                  deleteTask.mutate(taskId);
+                }
+              }}
+            />
           ))}
         </div>
       </DragDropContext>

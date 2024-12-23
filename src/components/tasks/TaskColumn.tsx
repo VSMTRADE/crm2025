@@ -1,42 +1,45 @@
-import { memo } from 'react';
-import { Droppable } from 'react-beautiful-dnd';
 import { Task } from '../../types';
 import { TaskCard } from './TaskCard';
+import { StrictModeDroppable } from '../../components/dnd/StrictModeDroppable';
 
 interface TaskColumnProps {
   title: string;
   tasks: Task[];
-  id: string;
+  status: Task['status'];
+  onEditTask: (taskId: string, taskData: Partial<Task>) => void;
+  onDeleteTask: (taskId: string) => void;
 }
 
-const TaskColumn = memo(({ title, tasks, id }: TaskColumnProps) => {
+export function TaskColumn({ title, tasks, status, onEditTask, onDeleteTask }: TaskColumnProps) {
   return (
-    <div className="bg-gray-50 p-4 rounded-lg min-w-[300px] w-full">
-      <h3 className="font-medium text-gray-900 mb-4">{title} ({tasks.length})</h3>
-      <Droppable droppableId={id}>
-        {(provided, snapshot) => (
-          <div
-            ref={provided.innerRef}
-            {...provided.droppableProps}
-            className={`space-y-3 min-h-[200px] transition-colors duration-200 ${
-              snapshot.isDraggingOver ? 'bg-indigo-50' : ''
-            }`}
-          >
-            {tasks.map((task, index) => (
-              <TaskCard 
-                key={task.id} 
-                task={task} 
-                index={index}
-              />
-            ))}
-            {provided.placeholder}
-          </div>
-        )}
-      </Droppable>
+    <div className="flex-1 min-w-[300px]">
+      <div className="bg-gray-50 p-4 rounded-lg">
+        <h3 className="font-medium text-gray-900 mb-4">
+          {title} ({tasks.length})
+        </h3>
+        <StrictModeDroppable droppableId={status}>
+          {(provided, snapshot) => (
+            <div
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+              className={`min-h-[150px] transition-colors duration-200 ${
+                snapshot.isDraggingOver ? 'bg-indigo-50' : ''
+              }`}
+            >
+              {tasks.map((task, index) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  index={index}
+                  onEditTask={onEditTask}
+                  onDeleteTask={onDeleteTask}
+                />
+              ))}
+              {provided.placeholder}
+            </div>
+          )}
+        </StrictModeDroppable>
+      </div>
     </div>
   );
-});
-
-TaskColumn.displayName = 'TaskColumn';
-
-export { TaskColumn };
+}

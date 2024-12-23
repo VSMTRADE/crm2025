@@ -4,12 +4,14 @@ import { useContacts } from '../hooks/useContacts';
 import { ContactList } from '../components/contacts/ContactList';
 import { ContactFilter } from '../components/contacts/ContactFilter';
 import { AddContactForm } from '../components/contacts/AddContactForm';
+import { ContactCard } from '../components/contacts/ContactCard';
 import { Contact } from '../types';
 
 export default function Contacts() {
-  const { data: contacts = [], isLoading, createContact } = useContacts();
+  const { data: contacts = [], isLoading, createContact, updateContact, deleteContact } = useContacts();
   const [activeType, setActiveType] = useState<Contact['type'] | 'all'>('all');
   const [isAddContactOpen, setIsAddContactOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
 
   const counts = {
     all: contacts.length,
@@ -28,6 +30,27 @@ export default function Contacts() {
     }
   };
 
+  const handleEditContact = async (contactData: Omit<Contact, 'id' | 'created_at'>) => {
+    try {
+      if (editingContact) {
+        await updateContact.mutateAsync({ ...contactData, id: editingContact.id });
+        console.log('Contato atualizado com sucesso');
+        setEditingContact(null);
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar contato:', error);
+    }
+  };
+
+  const handleDeleteContact = async (id: string) => {
+    try {
+      await deleteContact.mutateAsync(id);
+      console.log('Contato excluído com sucesso');
+    } catch (error) {
+      console.error('Erro ao excluir contato:', error);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -35,6 +58,10 @@ export default function Contacts() {
       </div>
     );
   }
+
+  const filteredContacts = activeType === 'all' 
+    ? contacts 
+    : contacts.filter(contact => contact.type === activeType);
 
   return (
     <div className="space-y-6">
@@ -49,36 +76,39 @@ export default function Contacts() {
         </button>
       </div>
 
-      {isAddContactOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h2 className="text-lg font-medium">Novo Contato</h2>
-              <button
-                onClick={() => setIsAddContactOpen(false)}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                ×
-              </button>
-            </div>
-            <AddContactForm 
-              onAddContact={handleAddContact}
-              onCancel={() => setIsAddContactOpen(false)}
-            />
-          </div>
-        </div>
-      )}
-
       <ContactFilter
+        counts={counts}
         activeType={activeType}
         onTypeChange={setActiveType}
-        counts={counts}
       />
 
-      <ContactList
-        contacts={contacts}
-        type={activeType === 'all' ? undefined : activeType}
-      />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredContacts.map((contact) => (
+          <ContactCard
+            key={contact.id}
+            contact={contact}
+            onEdit={setEditingContact}
+            onDelete={handleDeleteContact}
+          />
+        ))}
+      </div>
+
+      {/* Modal de Adicionar Contato */}
+      {isAddContactOpen && (
+        <AddContactForm
+          onSubmit={handleAddContact}
+          onCancel={() => setIsAddContactOpen(false)}
+        />
+      )}
+
+      {/* Modal de Editar Contato */}
+      {editingContact && (
+        <AddContactForm
+          contact={editingContact}
+          onSubmit={handleEditContact}
+          onCancel={() => setEditingContact(null)}
+        />
+      )}
     </div>
   );
 }

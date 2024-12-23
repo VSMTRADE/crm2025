@@ -125,11 +125,26 @@ export function useTasks() {
     },
   });
 
+  const deleteTask = useMutation({
+    mutationFn: async (taskId: string) => {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', taskId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+
   return {
     tasks,
     isLoading,
     updateTaskStatus,
     createTask,
     editTask,
+    deleteTask,
   };
 }
