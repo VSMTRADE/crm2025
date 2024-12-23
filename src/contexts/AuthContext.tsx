@@ -1,12 +1,11 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 
 interface User {
   id: string;
   email: string;
-  role: 'admin' | 'user';
-  name: string;
+  isAdmin: boolean;
 }
 
 interface AuthContextType {
@@ -16,7 +15,9 @@ interface AuthContextType {
   signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const ADMIN_EMAIL = 'wanderson.martins.silva@gmail.com';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -26,83 +27,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Verificar sessão atual
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        getUserProfile(session.user.id);
-      } else {
-        setLoading(false);
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email!,
+          isAdmin: session.user.email === ADMIN_EMAIL
+        });
       }
+      setLoading(false);
     });
 
     // Escutar mudanças de auth
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        getUserProfile(session.user.id);
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email!,
+          isAdmin: session.user.email === ADMIN_EMAIL
+        });
       } else {
         setUser(null);
-        setLoading(false);
-        navigate('/login');
       }
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  async function getUserProfile(userId: string) {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) throw error;
-
-      if (data) {
-        setUser({
-          id: data.id,
-          email: data.email,
-          role: data.role,
-          name: data.name,
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
+  }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log('Verificando email:', email);
+      // Verificar se é o admin
+      if (email !== ADMIN_EMAIL) {
+        console.log('Email não é do admin');
+        throw new Error('Acesso permitido apenas para administradores');
+      }
+
+      console.log('Tentando login no Supabase...');
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.log('Erro no login:', error);
+        throw error;
+      }
 
       if (data.user) {
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', data.user.id)
-          .single();
-
-        if (userError) throw userError;
-
-        if (userData.role !== 'admin') {
+        console.log('Usuário logado:', data.user);
+        if (data.user.email !== ADMIN_EMAIL) {
+          console.log('Email não corresponde ao admin');
           await signOut();
           throw new Error('Acesso permitido apenas para administradores');
         }
-
-        // Atualizar último login
-        await supabase
-          .from('users')
-          .update({ last_login: new Date().toISOString() })
-          .eq('id', data.user.id);
-
+        console.log('Login bem sucedido, redirecionando...');
         navigate('/');
       }
     } catch (error) {
@@ -112,20 +93,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-      navigate('/login');
-    } catch (error) {
-      console.error('Error signing out:', error);
-      throw error;
-    }
+    await supabase.auth.signOut();
+    navigate('/login');
   };
 
-  return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = {
+    user,
+    loading,
+    signIn,
+    signOut,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

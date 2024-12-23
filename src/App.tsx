@@ -9,6 +9,7 @@ import Calendar from './pages/Calendar';
 import Tasks from './pages/Tasks';
 import Finance from './pages/Finance';
 import Login from './pages/Login';
+import Backup from './pages/Backup';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -36,6 +37,7 @@ function App() {
               <Route path="calendar" element={<Calendar />} />
               <Route path="tasks" element={<Tasks />} />
               <Route path="finance" element={<Finance />} />
+              <Route path="backup" element={<Backup />} />
             </Route>
           </Routes>
         </AuthProvider>
