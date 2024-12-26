@@ -2,22 +2,38 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
-interface User {
+export type User = {
   id: string;
   email: string;
   isAdmin: boolean;
-}
+  displayName?: string;  // Novo campo para exibição
+};
 
-interface AuthContextType {
+export type AuthContextType = {
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-}
+};
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const ADMIN_EMAIL = 'wanderson.martins.silva@gmail.com';
+// Configuração segura do admin
+const ADMIN_EMAILS = [
+  'wanderson.martins.silva@gmail.com',
+  'vanessatorresfiel@gmail.com'
+];
+
+const ADMIN_CONFIG = {
+  displayName: 'Administrador'  // Nome para exibição
+};
+
+// Função para verificar admin de forma segura
+const isAdminEmail = (email: string): boolean => {
+  return ADMIN_EMAILS.some(adminEmail => 
+    email.toLowerCase() === adminEmail.toLowerCase()
+  );
+};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -28,10 +44,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Verificar sessão atual
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
+        const isAdmin = isAdminEmail(session.user.email!);
         setUser({
           id: session.user.id,
           email: session.user.email!,
-          isAdmin: session.user.email === ADMIN_EMAIL
+          isAdmin,
+          displayName: isAdmin ? ADMIN_CONFIG.displayName : session.user.email
         });
       }
       setLoading(false);
@@ -42,10 +60,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
+        const isAdmin = isAdminEmail(session.user.email!);
         setUser({
           id: session.user.id,
           email: session.user.email!,
-          isAdmin: session.user.email === ADMIN_EMAIL
+          isAdmin,
+          displayName: isAdmin ? ADMIN_CONFIG.displayName : session.user.email
         });
       } else {
         setUser(null);
@@ -60,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Verificando email:', email);
       // Verificar se é o admin
-      if (email !== ADMIN_EMAIL) {
+      if (!isAdminEmail(email)) {
         console.log('Email não é do admin');
         throw new Error('Acesso permitido apenas para administradores');
       }
@@ -78,7 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (data.user) {
         console.log('Usuário logado:', data.user);
-        if (data.user.email !== ADMIN_EMAIL) {
+        if (!isAdminEmail(data.user.email)) {
           console.log('Email não corresponde ao admin');
           await signOut();
           throw new Error('Acesso permitido apenas para administradores');

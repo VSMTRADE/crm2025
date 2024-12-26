@@ -10,6 +10,7 @@ import Tasks from './pages/Tasks';
 import Finance from './pages/Finance';
 import Login from './pages/Login';
 import Backup from './pages/Backup';
+import Negotiations from './pages/Negotiations';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -38,6 +39,7 @@ function App() {
               <Route path="tasks" element={<Tasks />} />
               <Route path="finance" element={<Finance />} />
               <Route path="backup" element={<Backup />} />
+              <Route path="negotiations" element={<Negotiations />} />
             </Route>
           </Routes>
         </AuthProvider>
